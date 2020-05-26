@@ -17,13 +17,16 @@ raw_towns <- file %>%
         read_excel(sheet = "QNet") %>%
         pivot_longer("1/2016":'4/2020', 
                      names_to = "date", 
-                     values_to = "Q_MGD") %>%
+                     values_to = "TOT_MGD") %>%
         mutate(month = month(parse_date_time(date, orders="my")),
                year = year(parse_date_time(date, orders="my")))
 
 # Drop 'QNet" from Town strings to match QFinal table
 
-raw_towns$Town <- sub("([A-Za-z]+).*", "\\1", raw_towns$Town)
+raw_towns$town <- sub("([A-Za-z]+).*", "\\1", raw_towns$town)
+
+## Pulls in Raw data from excel for each revenue meter and town association
+## splits into month/date for easy sorting
 
 raw_meters <- file %>% 
         read_excel(sheet = "QFinal") %>%
@@ -31,9 +34,17 @@ raw_meters <- file %>%
                      names_to = "date", 
                      values_to = "Q_MGD")%>%
         mutate(month = month(parse_date_time(date, orders="my")),
-               year = year(parse_date_time(date, orders="my")))
+               year = year(parse_date_time(date, orders="my"))) 
 
-townlist <- unique(raw_towns$Town)
+townlist <- unique(raw_towns$town)
+
+
+final_data <- left_join(raw_meters, 
+                        raw_towns[, c('town', 'date', 'TOT_MGD')], 
+                        by = c('town', 'date'))
+
+final_data <- final_data %>%
+                mutate(est_ratio = TOT_MGD/Q_MGD)
 
 ### tibble search example
 ### raw_towns$Q_MGD[raw_towns$Town == "Arlington" & raw_towns$date == "1/2018"]
