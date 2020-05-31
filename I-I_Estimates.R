@@ -1,5 +1,7 @@
 ####################################
-# This script Examines the past 4 years monthly 
+# This script organizes data for the I-I analysis from 2016 through 2020
+# ggplot graphs created on subsequent script
+# 
  
 
 library(tidyverse)
@@ -32,9 +34,10 @@ Water_hist <- Water_hist %>%
         ungroup() %>%
         na.omit()
 
-## Bring in Carls  
+## Bring in Carls II Numbers, iteratively searches by years 2016-2019
 cols <- c('text', 'text', rep('numeric', 13))
 for(i in 2016:2019){
+        
 looptbl <- paste('raw_data/', as.character(i), '_ii_calcs.xls', sep = '') %>%
         read_excel(sheet = "Table4",
                    range = "A2:O729",
@@ -53,21 +56,15 @@ looptbl <- paste('raw_data/', as.character(i), '_ii_calcs.xls', sep = '') %>%
 assign(paste('II_', i, sep = ''), looptbl)
 
 }
+
+
 ####Bind all years data
+
 II_2016_2019 <- bind_rows(II_2016, II_2017, II_2018, II_2019, Water_hist)
 rm(cols, i, looptbl)
 rm(II_2016, II_2017, II_2018, II_2019)
 
-###Creates list of WW Communities
-
-townlist <- 'raw_data/qnet_monthly.xls' %>%
-        read_excel(sheet = "QNet",
-                   range = "A1:A55")
-
-townlist$town <- sub("([A-Za-z]+).*", "\\1", townlist$town)
-
-
-##Normalizing data names (Boston Total)
+##Normalizing data names "Boston (Total)" to "Boston"
 II_2016_2019$meas[II_2016_2019$meas == "Final Estimated Infiltration"] <- 
         "Estimated Infiltration"
 II_2016_2019$community[II_2016_2019$community == "Boston (Total)"] <- 
@@ -79,36 +76,29 @@ II_2016_2019$community[II_2016_2019$community == "Milton (Total)"] <-
 II_2016_2019$community[II_2016_2019$community == "Newton (Total)"] <- 
         "Newton"
 
-measurements <- unique(II_2016_2019$meas)
-townlist <- unique(townlist$town)
+###Creates list of WW Communities
+
+WW_towns <- 'raw_data/qnet_monthly.xls' %>%
+        read_excel(sheet = "QNet",
+                   range = "A1:A55")
+W_Towns <- 'raw_data/water_cust_types.xlsx' %>%
+        read_excel()
+
+
+FS_Sewer_towns <- unique(sub("([A-Za-z]+).*", "\\1", WW_towns$town))
+FS_Water_towns <- W_Towns$community[W_Towns$cust_type == "F"]
+FS_WandS_towns <- intersect(FS_Sewer_towns,FS_Water_towns)
+
+m_type <- unique(II_2016_2019$meas)
 winter <- month.abb[c(1,2,3,12)]
 
+FS_WandS <- II_2016_2019[II_2016_2019$community %in% FS_WandS_towns,]
+
+write_csv(FS_WandS, "BI_data/II_Water.csv")
+          
 
 
 
 
 
-#########Graphs!##########################
 
-II_Base <- II_2016_2019[II_2016_2019$meas %in% measurements[c(12, 3:5)] &
-                                II_2016_2019$community %in% townlist,] %>%
-        group_by(community, month) %>%
-        ggplot(aes(fill = meas, x = community, y = Q_MGD)) +
-        theme(axis.text.x = element_text(angle = 90, vjust = .25, hjust = 1))
-
-Water_Comp <- II_2016_2019[II_2016_2019$meas %in% measurements[c(4,13)] &
-                                   II_2016_2019$community %in% townlist &
-                                   II_2016_2019$month %in% winter,] %>%
-        group_by(community,year) %>%
-        ggplot(aes(x = month, y = Q_MGD, fill = meas))
-
-P_Water <- Water_Comp +
-        geom_bar(stat = "summary", fun = mean, position = position_dodge()) +
-        facet_wrap(~community)
-                                   
-
-
-# p_total <- II_Base + geom_bar(stat = "summary", fun = mean, position = "stack")
-# p_norm <- II_Base + geom_bar(stat = "summary", fun = mean, position = "fill")
-# 
-# p_facet <- p_norm + facet_wrap(~year)
