@@ -136,14 +136,14 @@ for(i in townlist) {
                 ylim(-0.15, 0.15) +
                 ylab("Monthly ratio of 2019 Estimate to Actual by meter") +
                 theme(axis.text.x = element_text(angle = 90, hjust = 1))
-# save plots as .pdf
-        ggsave(p,
-               file=paste('plots/',
-                          i,
-                          '_box',
-                          ".pdf",
-                          sep=''),
-               scale=2)
+# # save plots as .pdf
+#         ggsave(p,
+#                file=paste('plots/',
+#                           i,
+#                           '_box',
+#                           ".pdf",
+#                           sep=''),
+#                scale=2)
 ###Print Plots to Console
 #        print(p)
 }

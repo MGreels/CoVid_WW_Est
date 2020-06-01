@@ -1,7 +1,11 @@
 ####################################
-# This script organizes data for the I-I analysis from 2016 through 2020
-# ggplot graphs created on subsequent script
-# 
+# This script organizes and Cleans data for the I-I analysis from 2016 through 2020
+# ggplot graphs created on subsequent script.
+# Use files 
+# 2016-2019_ii_calcs.xls From Carl Leone, annual II reports
+# daily_water_2015_2020.xls From Telog
+# water_cust_types
+# qnet_monthly
  
 
 library(tidyverse)
@@ -90,13 +94,14 @@ FS_Water_towns <- W_Towns$community[W_Towns$cust_type == "F"]
 FS_WandS_towns <- intersect(FS_Sewer_towns,FS_Water_towns)
 
 m_type <- unique(II_2016_2019$meas)
-winter <- month.abb[c(1,2,3,12)]
+#winter <- month.abb[c(1,2,3,12)]
 
-FS_WandS <- II_2016_2019[II_2016_2019$community %in% FS_WandS_towns,]
 
 write_csv(FS_WandS, "BI_data/II_Water.csv")
           
-
+rm(WW_towns, W_Towns)
+rm(Water_hist)
+rm(winter)
 
 
 
