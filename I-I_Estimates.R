@@ -25,10 +25,14 @@ Water_hist <- read_excel('raw_data/daily_water_2015_2020.xls',
                      values_to = "Q_mgd") %>%
         na.omit()
 
+#Converts date to actual date format from string,
 Water_hist$Date <- mdy_hm(Water_hist$Date)
+
+## SPlits town string to Town name only
 Water_hist$community <- sub("([A-Za-z]+).*", "\\1", 
                        Water_hist$community)
 
+## Calculates Average daily demand for each community by month and year
 Water_hist <- Water_hist %>%
         mutate(month = month.abb[month(Date)], 
                year = year(Date))%>%
@@ -41,6 +45,9 @@ Water_hist <- Water_hist %>%
 ## Bring in Carls II Numbers, iteratively searches by years 2016-2019
 cols <- c('text', 'text', rep('numeric', 13))
 for(i in 2016:2019){
+
+## looptbl tbl created for each year iteration from individual year data from CL
+## pivots data into tidy format and creates year vector
         
 looptbl <- paste('raw_data/', as.character(i), '_ii_calcs.xls', sep = '') %>%
         read_excel(sheet = "Table4",
@@ -57,13 +64,13 @@ looptbl <- paste('raw_data/', as.character(i), '_ii_calcs.xls', sep = '') %>%
                      values_to = "Q_MGD") %>%
         mutate(year = i)
 
+## Assigns temp variable looptbl to an iterative name
 assign(paste('II_', i, sep = ''), looptbl)
 
 }
 
 
-####Bind all years data
-
+####Bind all years data, removes temp variables used in the for loop
 II_2016_2019 <- bind_rows(II_2016, II_2017, II_2018, II_2019, Water_hist)
 rm(cols, i, looptbl)
 rm(II_2016, II_2017, II_2018, II_2019)
@@ -96,11 +103,12 @@ FS_WandS_towns <- intersect(FS_Sewer_towns,FS_Water_towns)
 m_type <- unique(II_2016_2019$meas)
 #winter <- month.abb[c(1,2,3,12)]
 
-
-write_csv(FS_WandS, "BI_data/II_Water.csv")
+FS_WandS <- II_2016_2019 %>% 
+        filter(community %in% FS_WandS_towns)
+#
+#write_csv(FS_WandS, "BI_data/II_Water.csv")
           
 rm(WW_towns, W_Towns)
-rm(Water_hist)
 rm(winter)
 
 

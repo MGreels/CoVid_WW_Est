@@ -27,9 +27,14 @@ Build_Est <- function(year_1,
                 summarise(monthlyav = mean(monthlyav)) %>%
                 mutate(year = "18-20") %>%
                 ungroup() %>%
+                ## Select maximum month for each community.
+                group_by(community) %>%
+                mutate(max_MGD = max(monthlyav)) %>%
+                ungroup() %>%
                 #Add Sanitary flows over the same months and calculate teh I-I Flow
                 left_join(Sani_19, by = c("community", "month")) %>%
-                mutate( II_Q = monthlyav - Sani_Q)%>%
+                mutate( av_II_Q = monthlyav - Sani_Q,
+                        max_II_Q = max_MGD - Sani_Q)%>%
                 # #Group by community and create a community monthly estimate
                 # group_by(community) %>%
                 # summarise(Sani_Q = mean(Sani_Q),
