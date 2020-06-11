@@ -2,6 +2,10 @@
     "path" : "C:/Users/greeley_m/projects/Wastewater_Model/BI_data",
     "sortOrder" : [
         {
+            "ascending" : false,
+            "columnIndex" : 4
+        },
+        {
             "ascending" : true,
             "columnIndex" : 2
         }

@@ -6,7 +6,15 @@ library(lubridate)
 library(dplyr)
 
 #####   Sanitary Data -----------------------------------------------------------
-
+# Formats Water scaling factors from COVID data
+W_factors <- Water_hist %>%
+        filter(year %in% c(2017:2020),
+               month %in% "Apr") %>%
+        group_by(community, month) %>%
+        summarise(factor = Q_MGD[year == 2020]/
+                          (mean(Q_MGD[year %in% 2017:2019]))) %>%
+        subset(select = c(-month))%>%
+        mutate(factor = if_else (is.na(factor),1,factor))
 
 # Pull Sanitary flow averages for towns 
 Sani_17_19 <- II_2016_2019 %>%
@@ -39,6 +47,34 @@ Sani_19 <- II_2016_2019 %>%
         select(select = -meas) %>%
         rename(Sani_Q = Q_MGD) %>%
         subset(select = -year)
+
+Sani_20W_deltas6 <-II_2016_2019 %>%
+        filter(meas == m_type[4],
+               year == 2019,
+               month %in% month.abb,
+               community %in% FS_Sewer_towns ) %>%
+        select(select = -meas) %>%
+        rename(Sani_Q = Q_MGD) %>%
+        subset(select = -year)%>%
+        left_join(W_factors, by = c("community"))%>%
+        mutate(factor = if_else (is.na(factor),1,factor))%>%
+        mutate(factor = if_else(month %in% month.abb[3:8], factor,1))%>%
+        mutate(Sani_delta = (factor-1)*Sani_Q) %>%
+        subset(select = c(-Sani_Q, -factor))
+
+Sani_20W_deltas2 <-II_2016_2019 %>%
+        filter(meas == m_type[4],
+               year == 2019,
+               month %in% month.abb,
+               community %in% FS_Sewer_towns ) %>%
+        select(select = -meas) %>%
+        rename(Sani_Q = Q_MGD) %>%
+        subset(select = -year)%>%
+        left_join(W_factors, by = c("community"))%>%
+        mutate(factor = if_else (is.na(factor),1,factor))%>%
+        mutate(factor = if_else(month %in% month.abb[3:4], factor,1))%>%
+        mutate(Sani_delta = (factor-1)*Sani_Q) %>%
+        subset(select = c(-Sani_Q, -factor))
 
 #####   FY20 actual -----------------------------------------------------------
 mon_16_18 <- II_2016_2019 %>%
@@ -136,52 +172,76 @@ ww_FY22_doub19 <- Build_Est(2018,
                             2019, 
                             rec20a,
                             "FY22",
-                            "Option2 FY22 w/ dbl 2019")
+                            "Option 2 - FY22 w/ dbl 2019")
 
-#####   Estimate 2020 including CoVid Water Rebalancing ---------
+#####   Estimate 2020 including CoVid Water Rebalancing for 6 months ---------
 
-W_factors <- Water_hist %>%
-        filter(year %in% c(2017:2020),
-               month %in% "Apr") %>%
-        group_by(community, month) %>%
-        summarise(factor = Q_MGD[year == 2020]/
-                          (mean(Q_MGD[year %in% 2017:2019]))) %>%
-        subset(select = c(-month))%>%
-        mutate(factor = if_else (is.na(factor),1,factor))
+## Sets 2020 of Record - CoVid Assessment through Various months
 
-## Sets 2020 of Record - CoVid 
-
-rec20W <- rec20 %>%
-        left_join(Sani_19, by = c("community", "month")) %>%
-        left_join(W_factors, by = c("community"))%>%
-        mutate(factor = if_else (is.na(factor),1,factor))%>%
-        mutate(factor = if_else(month %in% month.abb[3:8], factor,1)) %>%
-        mutate(monthlyav =  monthlyav - (Sani_Q*(1-factor))) %>%
-        subset(select = c(-factor, -Sani_Q))
+rec20W6 <- rec20 %>%
+        left_join(Sani_20W_deltas, by = c("community", "month")) %>%
+        mutate(monthlyav =  monthlyav + Sani_delta) %>%
+        subset(select = c(-Sani_delta))
      
-ww_FY22_water <- Build_Est(2018,
+ww_FY22_6mo_water <- Build_Est(2018,
                             2019, 
-                            rec20W,
+                            rec20W6,
                             "FY22",
-                            "Option 3 - FY22 w/ water adjustment") %>%
+                            "Option 3.2 - FY22 w/ 6 mo.COVID adjustment") %>%
 ## Estimate Function leaves with Normal Sani_Q, not adjusted based
 ## on water difference.  This code adds the water scaling factor to the
 ## tbl, then calculates II and total flow based on reduced sanitary
-        left_join(W_factors, by = c("community"))%>%
-        mutate(factor = if_else (is.na(factor),1,factor))%>%
-        mutate(Sani_Q = Sani_Q*factor) %>%
-        mutate(monthlyav = Sani_Q + av_II_Q) %>%
-        subset(select = -factor)
+        left_join(Sani_20W_deltas, by = c("community", "month"))%>%
+        mutate(Sani_Q = (3*Sani_Q+Sani_delta)/3) %>%
+        mutate(av_II_Q = monthlyav - Sani_Q,
+               max_II_Q = monthlyav - Sani_Q) %>%
+        subset(select = c(-Sani_delta))
+
+#####   Estimate 2020 including CoVid Water Rebalancing for 2 months ---------
+
+rec20W2 <- rec20 %>%
+        left_join(Sani_20W_deltas2, by = c("community", "month")) %>%
+        mutate(monthlyav =  monthlyav + Sani_delta) %>%
+        subset(select = c(-Sani_delta))
+
+ww_FY22_2mo_water <- Build_Est(2018,
+                               2019, 
+                               rec20W2,
+                               "FY22",
+                               "Option 3.1 - FY22 w/ 2 mo.COVID adjustment") %>%
+        ## Estimate Function leaves with Normal Sani_Q, not adjusted based
+        ## on water difference.  This code adds the water scaling factor to the
+        ## tbl, then calculates II and total flow based on reduced sanitary
+        left_join(Sani_20W_deltas2, by = c("community", "month"))%>%
+        mutate(Sani_Q = (3*Sani_Q+Sani_delta)/3) %>%
+        mutate(av_II_Q = monthlyav - Sani_Q,
+               max_II_Q = monthlyav - Sani_Q) %>%
+        subset(select = c(-Sani_delta))
 
 
-########### NEW ESTIMATE#####################
 
 #####Print Estimates to CSV-----
 
-write_csv(rbind(ww_FY20_act, 
+all_bound <- rbind(ww_FY20_act, 
                 ww_FY21_act, 
                 ww_FY21_est19,
                 ww_FY22_est20, 
                 ww_FY22_doub19,
-                ww_FY22_water), 
-          "BI_data/Current_Estimates.csv")
+                ww_FY22_6mo_water,
+                ww_FY22_2mo_water)
+
+WandS_bound <- filter(all_bound, all_bound$community %in% FS_WandS_towns)
+
+Model_diff <- WandS_bound %>%
+        group_by(community, desc) %>%
+        summarise(monthlyav = mean(monthlyav),
+                  Sani_Q = mean(Sani_Q),
+                  av_II_Q = mean(av_II_Q)) %>%
+        mutate(diff = (monthlyav - 
+                       monthlyav[desc == "Baseline FY22 w/ 3yr av for CY20"])/
+                       monthlyav[desc == "Baseline FY22 w/ 3yr av for CY20"])
+
+
+write_csv(all_bound, "BI_data/Current_Estimates.csv")
+
+write_csv(Model_diff, "BI_data/Model_diffs.csv")

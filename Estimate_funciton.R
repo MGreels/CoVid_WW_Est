@@ -25,7 +25,9 @@ Build_Est <- function(year_1,
                 group_by(community, month) %>%
                 #Summarize the flow values to an average for months, add year range
                 summarise(monthlyav = mean(monthlyav)) %>%
-                mutate(year = "18-20") %>%
+                mutate(year = paste(substring(year_1,3),
+                                    "-", 
+                                    substring(year_2,3))) %>%
                 ungroup() %>%
                 ## Select maximum month for each community.
                 group_by(community) %>%

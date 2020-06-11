@@ -1,6 +1,9 @@
 ######  Script for graph creation for I-I analysis.  
-### Need to run I-I_Estimate.R
 
+
+library(ggrepel)
+#### Town by Town 
+###     Graph only includes towns that are sewered by both water and Sewer
 WvsII <- ww_FY21_act %>%
         group_by(community) %>%
         summarise(Sani_per = mean(Sani_Q)/mean(monthlyav)) %>%
@@ -10,10 +13,13 @@ WvsII <- ww_FY21_act %>%
 TownScat <- ggplot(WvsII, aes(x = Sani_per, 
                               y = factor, 
                               label = community)) +
-        geom_text(aes(label=community), size=3) +
-        xlab("WW Flow ratio - % Sanitary") +
-        ylab("Water Use change during CoVid") +
+        geom_point() +
+        geom_text_repel(aes(label=community), size=3) +
+        xlab("WW - ratio Sanitary/I-I") +
+        ylab("Water Use change during COVID") +
+        
         theme(legend.position = "none")
+        
 
 ggsave("plots/Town_Scatter.jpg", TownScat, device = 'jpg' )
 
